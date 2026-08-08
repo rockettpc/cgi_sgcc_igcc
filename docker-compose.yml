@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sgcc_app
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_USER=sgcc_user
+      - DB_PASSWORD=sgcc_pass_2026
+      - DB_NAME=sgcc_break_test
+      - JWT_SECRET=sgcc_production_jwt_secret_key_2026_proxmox
+      - UPLOAD_DIR=/uploads
+    volumes:
+      - uploaded_photos:/uploads
+      - ./client/dist:/app/client/dist
+      - ./server:/app/server
+    depends_on:
+      - db
+
+  db:
+    image: mariadb:10.11
+    container_name: sgcc_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root_pass_2026
+      MYSQL_DATABASE: sgcc_break_test
+      MYSQL_USER: sgcc_user
+      MYSQL_PASSWORD: sgcc_pass_2026
+    volumes:
+      - mariadb_data:/var/lib/mysql
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "3306:3306"
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: sgcc_phpmyadmin
+    restart: always
+    ports:
+      - "8081:80"
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      MYSQL_ROOT_PASSWORD: root_pass_2026
+    depends_on:
+      - db
+
+volumes:
+  mariadb_data:
+    name: sgcc_mariadb_data
+  uploaded_photos:
+    name: sgcc_uploaded_photos

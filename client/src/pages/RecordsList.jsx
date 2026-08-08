@@ -1,0 +1,588 @@
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
+import { FileSpreadsheet, Download, Image as ImageIcon, History, X, Eye, Edit, Trash2, CheckCircle2 } from 'lucide-react';
+
+export const RecordsList = () => {
+  const { token, user } = useAuth();
+  const { t } = useLanguage();
+
+  const [activeType, setActiveType] = useState('tempered'); // 'tempered' or 'laminated'
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [sgccFilter, setSgccFilter] = useState('');
+
+  const [temperedRecords, setTemperedRecords] = useState([]);
+  const [laminatedRecords, setLaminatedRecords] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  const [auditModal, setAuditModal] = useState({ open: false, logs: [], title: '' });
+  const [viewModal, setViewModal] = useState({ open: false, record: null, type: 'tempered' });
+  const [editModal, setEditModal] = useState({ open: false, record: null, type: 'tempered' });
+
+  const fetchRecords = () => {
+    setLoading(true);
+    let params = new URLSearchParams();
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    if (sgccFilter) params.append('sgcc_number', sgccFilter);
+
+    if (activeType === 'tempered') {
+      fetch(`/api/tempered-tests?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+        .then(res => res.json())
+        .then(data => { if (Array.isArray(data)) setTemperedRecords(data); })
+        .catch(() => {})
+        .finally(() => setLoading(false));
+    } else {
+      fetch(`/api/laminated/traceability?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+        .then(res => res.json())
+        .then(data => { if (Array.isArray(data)) setLaminatedRecords(data); })
+        .catch(() => {})
+        .finally(() => setLoading(false));
+    }
+  };
+
+  useEffect(() => {
+    fetchRecords();
+  }, [activeType, startDate, endDate, sgccFilter, token]);
+
+  const downloadFile = (url, defaultFilename) => {
+    fetch(url, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then(res => {
+        if (!res.ok) throw new Error('Export failed');
+        return res.blob();
+      })
+      .then(blob => {
+        const downloadUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = defaultFilename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(downloadUrl);
+      })
+      .catch(() => {
+        window.open(`${url}&token=${encodeURIComponent(token)}`, '_blank');
+      });
+  };
+
+  const handleExportCsv = () => {
+    const url = `/api/export/csv?type=${activeType}&startDate=${startDate}&endDate=${endDate}`;
+    downloadFile(url, `${activeType}_test_records.csv`);
+  };
+
+  const handleExportPdf = () => {
+    const url = `/api/export/pdf?type=${activeType}&startDate=${startDate}&endDate=${endDate}`;
+    downloadFile(url, `${activeType}_audit_report.pdf`);
+  };
+
+  const openAuditLogs = (entityType, entityId) => {
+    fetch(`/api/audit-logs?entity_type=${entityType}&entity_id=${entityId}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then(res => res.json())
+      .then(logs => {
+        setAuditModal({ open: true, logs: Array.isArray(logs) ? logs : [], title: `${entityType} #${entityId}` });
+      })
+      .catch(() => {});
+  };
+
+  const handleDeleteRecord = async (id, type) => {
+    if (!window.confirm('Are you sure you want to delete this compliance record? This action will be logged in the audit trail.')) return;
+    try {
+      const url = type === 'tempered' ? `/api/tempered-tests/${id}` : `/api/laminated/traceability/${id}`;
+      const res = await fetch(url, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        alert('Record deleted successfully');
+        fetchRecords();
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Failed to delete record');
+      }
+    } catch (err) {
+      alert('Error deleting record');
+    }
+  };
+
+  const handleSaveEdit = async (e) => {
+    e.preventDefault();
+    const { record, type } = editModal;
+    try {
+      const url = type === 'tempered' ? `/api/tempered-tests/${record.id}` : `/api/laminated/traceability/${record.id}`;
+      const res = await fetch(url, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(record)
+      });
+      if (res.ok) {
+        alert('Record updated successfully');
+        setEditModal({ open: false, record: null, type: 'tempered' });
+        fetchRecords();
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Failed to update record');
+      }
+    } catch (err) {
+      alert('Error updating record');
+    }
+  };
+
+  return (
+    <div>
+      <div className="card">
+        <div className="card-title" style={{ justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <FileSpreadsheet size={24} color="var(--success-text)" />
+            <span>{t('recordsList')}</span>
+          </div>
+
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="btn btn-secondary" style={{ minHeight: 36, padding: '6px 12px', fontSize: '0.82rem' }} onClick={handleExportCsv}>
+              <Download size={14} /> {t('exportCsv')}
+            </button>
+            <button className="btn btn-primary" style={{ minHeight: 36, padding: '6px 12px', fontSize: '0.82rem' }} onClick={handleExportPdf}>
+              <Download size={14} /> {t('exportPdf')}
+            </button>
+          </div>
+        </div>
+
+        {/* Record Type Selector */}
+        <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
+          <button
+            className={`btn ${activeType === 'tempered' ? 'btn-primary' : 'btn-secondary'}`}
+            style={{ flex: 1, minHeight: 40, fontSize: '0.88rem' }}
+            onClick={() => setActiveType('tempered')}
+          >
+            {t('newTemperedTest')} Logs
+          </button>
+          <button
+            className={`btn ${activeType === 'laminated' ? 'btn-primary' : 'btn-secondary'}`}
+            style={{ flex: 1, minHeight: 40, fontSize: '0.88rem' }}
+            onClick={() => setActiveType('laminated')}
+          >
+            {t('newLaminatedTest')} Logs
+          </button>
+        </div>
+
+        {/* Filters */}
+        <div className="filter-bar">
+          <div className="filter-item">
+            <label className="form-label" style={{ fontSize: '0.78rem' }}>{t('startDate')}</label>
+            <input
+              type="date"
+              className="form-input"
+              style={{ minHeight: 38, padding: '6px 10px', fontSize: '0.85rem' }}
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+            />
+          </div>
+          <div className="filter-item">
+            <label className="form-label" style={{ fontSize: '0.78rem' }}>{t('endDate')}</label>
+            <input
+              type="date"
+              className="form-input"
+              style={{ minHeight: 38, padding: '6px 10px', fontSize: '0.85rem' }}
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+            />
+          </div>
+          <div className="filter-item">
+            <label className="form-label" style={{ fontSize: '0.78rem' }}>{t('sgccNumber')}</label>
+            <input
+              type="text"
+              className="form-input"
+              style={{ minHeight: 38, padding: '6px 10px', fontSize: '0.85rem' }}
+              placeholder="Search SGCC #"
+              value={sgccFilter}
+              onChange={(e) => setSgccFilter(e.target.value)}
+            />
+          </div>
+        </div>
+
+        {/* Data Table */}
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: 20, color: 'var(--text-muted)' }}>Loading records...</div>
+        ) : activeType === 'tempered' ? (
+          <div className="table-container">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Date / Time</th>
+                  <th>SGCC #</th>
+                  <th>Thickness</th>
+                  <th>Max Wt (g)</th>
+                  <th>10-Pc Wt (g)</th>
+                  <th>Result</th>
+                  <th>Operator</th>
+                  <th>Photo</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {temperedRecords.length === 0 ? (
+                  <tr><td colSpan={9} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>No tempered break test records found.</td></tr>
+                ) : (
+                  temperedRecords.map(r => (
+                    <tr key={r.id}>
+                      <td>{r.test_date ? r.test_date.substring(0, 10) : ''} {r.test_time}</td>
+                      <td style={{ fontWeight: 600 }}>{r.sgcc_number}</td>
+                      <td>{r.thickness}</td>
+                      <td>{r.max_allowable_particle_weight}g</td>
+                      <td style={{ fontWeight: 700 }}>{r.actual_10pc_particle_weight}g</td>
+                      <td>
+                        <span className={`suggested-badge ${r.confirmed_pass_fail === 'Pass' ? 'badge-pass' : 'badge-fail'}`}>
+                          {r.confirmed_pass_fail}
+                        </span>
+                      </td>
+                      <td>{r.operator_name}</td>
+                      <td>
+                        {r.photo_path ? (
+                          <button 
+                            className="icon-btn" 
+                            style={{ width: 32, height: 32 }}
+                            onClick={() => setViewModal({ open: true, record: r, type: 'tempered' })}
+                            title="View Specimen Photo"
+                          >
+                            <ImageIcon size={16} color="var(--accent-primary)" />
+                          </button>
+                        ) : '-'}
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', gap: 4 }}>
+                          <button 
+                            className="icon-btn" 
+                            style={{ width: 30, height: 30 }}
+                            onClick={() => setViewModal({ open: true, record: r, type: 'tempered' })}
+                            title="View Log Details & Photo"
+                          >
+                            <Eye size={15} />
+                          </button>
+
+                          {(user?.role === 'QA Rep' || user?.role === 'Admin') && (
+                            <button 
+                              className="icon-btn" 
+                              style={{ width: 30, height: 30 }}
+                              onClick={() => openAuditLogs('tempered', r.id)}
+                              title="View Audit Trail"
+                            >
+                              <History size={15} />
+                            </button>
+                          )}
+
+                          {user?.role === 'Admin' && (
+                            <>
+                              <button 
+                                className="icon-btn" 
+                                style={{ width: 30, height: 30, color: 'var(--accent-primary)' }}
+                                onClick={() => setEditModal({ open: true, record: { ...r, test_date: r.test_date ? r.test_date.substring(0, 10) : '' }, type: 'tempered' })}
+                                title="Edit Record (Admin)"
+                              >
+                                <Edit size={15} />
+                              </button>
+                              <button 
+                                className="icon-btn" 
+                                style={{ width: 30, height: 30, color: 'var(--danger-text)' }}
+                                onClick={() => handleDeleteRecord(r.id, 'tempered')}
+                                title="Delete Record (Admin)"
+                              >
+                                <Trash2 size={15} />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="table-container">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Prod Date</th>
+                  <th>SGCC #</th>
+                  <th>Interlayer</th>
+                  <th>Type / Kind</th>
+                  <th>Thickness</th>
+                  <th>Week</th>
+                  <th>Test Specimens</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {laminatedRecords.length === 0 ? (
+                  <tr><td colSpan={8} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>No laminated traceability records found.</td></tr>
+                ) : (
+                  laminatedRecords.map(r => (
+                    <tr key={r.id}>
+                      <td>{r.production_date ? r.production_date.substring(0, 10) : ''} {r.production_time}</td>
+                      <td style={{ fontWeight: 600 }}>{r.sgcc_number || 'N/A'}</td>
+                      <td>{r.interlayer_type}</td>
+                      <td>{r.glass_type} ({r.glass_kind})</td>
+                      <td>{r.nominal_thickness}</td>
+                      <td>Wk {r.collection_week}</td>
+                      <td>
+                        {r.test_results && r.test_results.length > 0 ? (
+                          <div style={{ fontSize: '0.8rem' }}>
+                            {r.test_results.map(res => (
+                              <div key={res.id} style={{ marginBottom: 4 }}>
+                                #{res.specimen_number}: {res.test_date ? res.test_date.substring(0, 10) : ''} | {res.drop_height_class} | <strong style={{ color: 'var(--success-text)' }}>Cat {res.confirmed_result}</strong>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>No specimens tested yet</span>
+                        )}
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', gap: 4 }}>
+                          <button 
+                            className="icon-btn" 
+                            style={{ width: 30, height: 30 }}
+                            onClick={() => setViewModal({ open: true, record: r, type: 'laminated' })}
+                            title="View Log Details"
+                          >
+                            <Eye size={15} />
+                          </button>
+
+                          {(user?.role === 'QA Rep' || user?.role === 'Admin') && (
+                            <button 
+                              className="icon-btn" 
+                              style={{ width: 30, height: 30 }}
+                              onClick={() => openAuditLogs('laminated_traceability', r.id)}
+                              title="View Audit Trail"
+                            >
+                              <History size={15} />
+                            </button>
+                          )}
+
+                          {user?.role === 'Admin' && (
+                            <>
+                              <button 
+                                className="icon-btn" 
+                                style={{ width: 30, height: 30, color: 'var(--accent-primary)' }}
+                                onClick={() => setEditModal({ open: true, record: { ...r, production_date: r.production_date ? r.production_date.substring(0, 10) : '' }, type: 'laminated' })}
+                                title="Edit Traceability (Admin)"
+                              >
+                                <Edit size={15} />
+                              </button>
+                              <button 
+                                className="icon-btn" 
+                                style={{ width: 30, height: 30, color: 'var(--danger-text)' }}
+                                onClick={() => handleDeleteRecord(r.id, 'laminated')}
+                                title="Delete Record (Admin)"
+                              >
+                                <Trash2 size={15} />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Detail View Modal (Available to All Users) */}
+      {viewModal.open && viewModal.record && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }}>
+          <div className="card" style={{ width: '100%', maxWidth: 550, maxHeight: '90vh', overflowY: 'auto' }}>
+            <div className="card-title" style={{ justifyContent: 'space-between' }}>
+              <span>Log Details - {viewModal.type === 'tempered' ? `Tempered #${viewModal.record.id}` : `Laminated #${viewModal.record.id}`}</span>
+              <button className="icon-btn" onClick={() => setViewModal({ open: false, record: null, type: 'tempered' })}>
+                <X size={18} />
+              </button>
+            </div>
+
+            {viewModal.type === 'tempered' ? (
+              <div style={{ fontSize: '0.9rem', lineHeight: 1.6 }}>
+                <div><strong>Date & Time:</strong> {viewModal.record.test_date ? viewModal.record.test_date.substring(0, 10) : ''} {viewModal.record.test_time}</div>
+                <div><strong>SGCC #:</strong> {viewModal.record.sgcc_number}</div>
+                <div><strong>Glass Type:</strong> {viewModal.record.glass_type}</div>
+                <div><strong>Thickness:</strong> {viewModal.record.thickness}</div>
+                <div><strong>Sample Size:</strong> {viewModal.record.sample_size}</div>
+                <div><strong>Specimen Weight:</strong> {viewModal.record.specimen_weight_lbs} lbs</div>
+                <div><strong>Max Allowable Weight:</strong> {viewModal.record.max_allowable_particle_weight} g</div>
+                <div><strong>Actual 10-Piece Weight:</strong> {viewModal.record.actual_10pc_particle_weight} g</div>
+                <div><strong>Result:</strong> <span className={`suggested-badge ${viewModal.record.confirmed_pass_fail === 'Pass' ? 'badge-pass' : 'badge-fail'}`}>{viewModal.record.confirmed_pass_fail}</span></div>
+                <div><strong>Operator:</strong> {viewModal.record.operator_name}</div>
+                {viewModal.record.notes && <div><strong>Notes:</strong> {viewModal.record.notes}</div>}
+                
+                {viewModal.record.photo_path ? (
+                  <div style={{ marginTop: 14, textAlign: 'center' }}>
+                    <div style={{ fontWeight: 600, marginBottom: 6 }}>Uploaded Specimen Photo:</div>
+                    <img src={viewModal.record.photo_path} alt="Specimen Photo" style={{ maxWidth: '100%', maxHeight: 300, borderRadius: 8, border: '1px solid var(--border-color)' }} />
+                  </div>
+                ) : (
+                  <div style={{ marginTop: 10, color: 'var(--text-muted)' }}>No specimen photo uploaded for this log.</div>
+                )}
+              </div>
+            ) : (
+              <div style={{ fontSize: '0.9rem', lineHeight: 1.6 }}>
+                <div><strong>Production Date:</strong> {viewModal.record.production_date ? viewModal.record.production_date.substring(0, 10) : ''} {viewModal.record.production_time}</div>
+                <div><strong>SGCC #:</strong> {viewModal.record.sgcc_number || 'N/A'}</div>
+                <div><strong>Interlayer Type:</strong> {viewModal.record.interlayer_type}</div>
+                <div><strong>Glass Type & Kind:</strong> {viewModal.record.glass_type} ({viewModal.record.glass_kind})</div>
+                <div><strong>Nominal Thickness:</strong> {viewModal.record.nominal_thickness}</div>
+                <div><strong>Collection Week:</strong> Week {viewModal.record.collection_week}</div>
+
+                <div style={{ marginTop: 12, fontWeight: 700 }}>Specimen Test Results:</div>
+                {viewModal.record.test_results && viewModal.record.test_results.length > 0 ? (
+                  viewModal.record.test_results.map(res => (
+                    <div key={res.id} style={{ border: '1px solid var(--border-color)', borderRadius: 6, padding: 8, marginTop: 6, backgroundColor: 'var(--bg-primary)' }}>
+                      <div><strong>Specimen #{res.specimen_number}:</strong> Tested {res.test_date ? res.test_date.substring(0, 10) : ''}</div>
+                      <div>Drop Class: {res.drop_height_class} | Temp: {res.specimen_temp}°{res.temp_unit} | Min Thick: {res.measured_min_thickness}"</div>
+                      <div>Result Category: <strong>Cat {res.confirmed_result}</strong></div>
+                      {res.photo_path && (
+                        <div style={{ marginTop: 6, textAlign: 'center' }}>
+                          <img src={res.photo_path} alt="Specimen Photo" style={{ maxWidth: '100%', maxHeight: 200, borderRadius: 6 }} />
+                        </div>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>No specimens tested yet.</div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Edit Modal (Admin Only) */}
+      {editModal.open && editModal.record && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }}>
+          <div className="card" style={{ width: '100%', maxWidth: 500, maxHeight: '90vh', overflowY: 'auto' }}>
+            <div className="card-title" style={{ justifyContent: 'space-between' }}>
+              <span>Edit Compliance Log (Admin)</span>
+              <button className="icon-btn" onClick={() => setEditModal({ open: false, record: null, type: 'tempered' })}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEdit}>
+              {editModal.type === 'tempered' ? (
+                <>
+                  <div className="form-group">
+                    <label className="form-label">{t('sgccNumber')}</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={editModal.record.sgcc_number || ''}
+                      onChange={(e) => setEditModal({ ...editModal, record: { ...editModal.record, sgcc_number: e.target.value } })}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">{t('actual10pcWeight')}</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      className="form-input"
+                      value={editModal.record.actual_10pc_particle_weight || ''}
+                      onChange={(e) => setEditModal({ ...editModal, record: { ...editModal.record, actual_10pc_particle_weight: e.target.value } })}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Confirmed Pass/Fail</label>
+                    <select
+                      className="form-select"
+                      value={editModal.record.confirmed_pass_fail}
+                      onChange={(e) => setEditModal({ ...editModal, record: { ...editModal.record, confirmed_pass_fail: e.target.value } })}
+                    >
+                      <option value="Pass">Pass</option>
+                      <option value="Fail">Fail</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">{t('notes')}</label>
+                    <textarea
+                      className="form-textarea"
+                      value={editModal.record.notes || ''}
+                      onChange={(e) => setEditModal({ ...editModal, record: { ...editModal.record, notes: e.target.value } })}
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="form-group">
+                    <label className="form-label">{t('sgccNumber')}</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={editModal.record.sgcc_number || ''}
+                      onChange={(e) => setEditModal({ ...editModal, record: { ...editModal.record, sgcc_number: e.target.value } })}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">{t('interlayerType')}</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={editModal.record.interlayer_type || ''}
+                      onChange={(e) => setEditModal({ ...editModal, record: { ...editModal.record, interlayer_type: e.target.value } })}
+                    />
+                  </div>
+                </>
+              )}
+
+              <button type="submit" className="btn btn-primary" style={{ marginTop: 10 }}>
+                Save Changes (Records Audit Trail)
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Audit Logs Modal */}
+      {auditModal.open && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }}>
+          <div className="card" style={{ width: '100%', maxWidth: 600, maxHeight: '80vh', overflowY: 'auto' }}>
+            <div className="card-title" style={{ justifyContent: 'space-between' }}>
+              <span>Audit Trail - {auditModal.title}</span>
+              <button className="icon-btn" onClick={() => setAuditModal({ open: false, logs: [], title: '' })}>
+                <X size={18} />
+              </button>
+            </div>
+            
+            {auditModal.logs.length === 0 ? (
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>No edits logged for this record.</p>
+            ) : (
+              auditModal.logs.map(log => (
+                <div key={log.id} style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: 10, marginBottom: 10 }}>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>
+                    Action: <strong>{log.action}</strong> by <strong>{log.changed_by_username}</strong> on {new Date(log.changed_at).toLocaleString()}
+                  </div>
+                  {log.old_values && (
+                    <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 4 }}>
+                      Before: {JSON.stringify(JSON.parse(log.old_values))}
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
