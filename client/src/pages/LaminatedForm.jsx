@@ -100,7 +100,7 @@ export const LaminatedForm = ({ setTab }) => {
       });
       const data = await res.json();
       if (res.ok) {
-        setSuccessMsg('Traceability record saved successfully!');
+        setSuccessMsg(t('traceabilitySavedSuccess'));
         loadTraceabilityList();
         setMode('test_result');
         if (data.id) {
@@ -120,7 +120,7 @@ export const LaminatedForm = ({ setTab }) => {
   const handleTestSubmit = async (e) => {
     e.preventDefault();
     if (!testForm.confirmed_result) {
-      setErrorMsg('You must explicitly confirm the ASTM category result (1-4).');
+      setErrorMsg(t('confirmAstmCategoryError'));
       return;
     }
 
@@ -157,7 +157,7 @@ export const LaminatedForm = ({ setTab }) => {
   return (
     <div>
       <button className="btn btn-secondary" style={{ width: 'auto', marginBottom: 14, minHeight: 36, padding: '6px 14px' }} onClick={() => setTab('dashboard')}>
-        <ArrowLeft size={16} /> Back to Dashboard
+        <ArrowLeft size={16} /> {t('backToDashboard')}
       </button>
 
       <div className="card">
@@ -314,7 +314,7 @@ export const LaminatedForm = ({ setTab }) => {
             <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: 14 }}>{t('addTestResult')} (Section B)</h3>
             
             <div className="form-group">
-              <label className="form-label">Link to Traceability Specimen Record</label>
+              <label className="form-label">{t('linkToTraceabilityRecord')}</label>
               <select
                 className="form-select"
                 value={selectedTraceId}
@@ -324,7 +324,7 @@ export const LaminatedForm = ({ setTab }) => {
                 }}
                 required
               >
-                <option value="">-- Select Specimen Collection Record --</option>
+                <option value="">{t('selectSpecimenRecordPlaceholder')}</option>
                 {existingTraceability.map(item => (
                   <option key={item.id} value={item.id}>
                     [{item.production_date}] {item.interlayer_type} - {item.nominal_thickness} (Week {item.collection_week})

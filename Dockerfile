@@ -15,6 +15,7 @@ RUN npm install --omit=dev
 
 COPY server/ ./server
 COPY db/ ./db
+COPY docs/ ./docs
 
 # Copy built frontend assets from stage 1
 COPY --from=client-builder /app/client/dist ./client/dist

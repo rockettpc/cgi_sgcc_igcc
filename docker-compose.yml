@@ -23,6 +23,7 @@ services:
       - uploaded_photos:/uploads
       - ./client/dist:/app/client/dist
       - ./server:/app/server
+      - ./docs:/app/docs
     depends_on:
       - db
 

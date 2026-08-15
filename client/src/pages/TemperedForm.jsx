@@ -136,7 +136,7 @@ export const TemperedForm = ({ setTab }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!confirmedResult) {
-      setErrorMsg('You must explicitly confirm Pass or Fail before saving.');
+      setErrorMsg(t('confirmMandatoryError'));
       return;
     }
 
@@ -177,7 +177,7 @@ export const TemperedForm = ({ setTab }) => {
   return (
     <div>
       <button className="btn btn-secondary" style={{ width: 'auto', marginBottom: 14, minHeight: 36, padding: '6px 14px' }} onClick={() => setTab('dashboard')}>
-        <ArrowLeft size={16} /> Back to Dashboard
+        <ArrowLeft size={16} /> {t('backToDashboard')}
       </button>
 
       <div className="card">

@@ -84,6 +84,36 @@ CREATE TABLE IF NOT EXISTS laminated_test_results (
     FOREIGN KEY (created_by) REFERENCES users(id)
 );
 
+CREATE TABLE IF NOT EXISTS roll_wave_tests (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    test_date DATE NOT NULL,
+    test_time TIME NOT NULL,
+    sgcc_number VARCHAR(100) NOT NULL,
+    operator_name VARCHAR(100) NOT NULL,
+    specimen_id VARCHAR(100) NOT NULL,
+    glass_thickness VARCHAR(50) NOT NULL,
+    gauge_type ENUM('Flat Bottom', 'Three Point Contact') NOT NULL,
+    unit ENUM('inches', 'mm') NOT NULL DEFAULT 'inches',
+    data_points JSON NOT NULL,
+    average_wavelength DECIMAL(8,3) NULL,
+    min_depth DECIMAL(8,5) NOT NULL,
+    max_depth DECIMAL(8,5) NOT NULL,
+    avg_depth DECIMAL(8,5) NOT NULL,
+    max_distortion_mdpt DECIMAL(8,2) NOT NULL,
+    avg_distortion_mdpt DECIMAL(8,2) NOT NULL,
+    distortion_threshold_mdpt DECIMAL(8,2) NULL,
+    suggested_pass_fail ENUM('Pass', 'Fail') NOT NULL,
+    confirmed_pass_fail ENUM('Pass', 'Fail') NOT NULL,
+    confirmed_by_user_id INT NOT NULL,
+    photo_path VARCHAR(255) NULL,
+    notes TEXT NULL,
+    created_by INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (confirmed_by_user_id) REFERENCES users(id),
+    FOREIGN KEY (created_by) REFERENCES users(id)
+);
+
 CREATE TABLE IF NOT EXISTS audit_logs (
     id INT AUTO_INCREMENT PRIMARY KEY,
     entity_type VARCHAR(50) NOT NULL, -- 'tempered', 'laminated_traceability', 'laminated_test'

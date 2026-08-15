@@ -102,7 +102,7 @@ export const AdminPanel = () => {
       alert('You cannot delete your own logged-in admin account.');
       return;
     }
-    if (!window.confirm(`Are you sure you want to delete user '${username}'?`)) return;
+    if (!window.confirm(`${t('confirmDeleteUser')} '${username}'?`)) return;
     try {
       const res = await fetch(`/api/users/${id}`, {
         method: 'DELETE',
@@ -171,7 +171,7 @@ export const AdminPanel = () => {
       <div className="card">
         <div className="card-title">
           <Users size={22} color="var(--accent-primary)" />
-          <span>{t('manageUsers')} & Roles</span>
+          <span>{t('manageUsers')}</span>
         </div>
 
         <form onSubmit={handleCreateUser} style={{ marginBottom: 20 }}>
@@ -217,10 +217,10 @@ export const AdminPanel = () => {
           <table className="data-table">
             <thead>
               <tr>
-                <th>Username</th>
-                <th>Role</th>
-                <th>Created Date</th>
-                <th>Actions</th>
+                <th>{t('username')}</th>
+                <th>{t('role')}</th>
+                <th>{t('date')}</th>
+                <th>{t('actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -266,7 +266,7 @@ export const AdminPanel = () => {
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }}>
           <div className="card" style={{ width: '100%', maxWidth: 450 }}>
             <div className="card-title" style={{ justifyContent: 'space-between' }}>
-              <span>Edit User: {editUserModal.user.username}</span>
+              <span>{t('editUserTitle')}: {editUserModal.user.username}</span>
               <button className="icon-btn" onClick={() => setEditUserModal({ open: false, user: null, role: 'Operator', newPassword: '' })}>
                 <X size={18} />
               </button>
@@ -274,31 +274,31 @@ export const AdminPanel = () => {
 
             <form onSubmit={handleUpdateUser}>
               <div className="form-group">
-                <label className="form-label">Assign Role</label>
+                <label className="form-label">{t('role')}</label>
                 <select
                   className="form-select"
                   value={editUserModal.role}
                   onChange={(e) => setEditUserModal({ ...editUserModal, role: e.target.value })}
                 >
-                  <option value="Operator">Operator (Shop floor testing)</option>
-                  <option value="QA Rep">QA Rep (Audit review & exports)</option>
-                  <option value="Admin">Admin (Full system control)</option>
+                  <option value="Operator">Operator</option>
+                  <option value="QA Rep">QA Rep</option>
+                  <option value="Admin">Admin</option>
                 </select>
               </div>
 
               <div className="form-group">
-                <label className="form-label">Reset Password (Optional)</label>
+                <label className="form-label">{t('password')}</label>
                 <input
                   type="password"
                   className="form-input"
-                  placeholder="Leave blank to keep existing password"
+                  placeholder={t('password')}
                   value={editUserModal.newPassword}
                   onChange={(e) => setEditUserModal({ ...editUserModal, newPassword: e.target.value })}
                 />
               </div>
 
               <button type="submit" className="btn btn-primary" style={{ marginTop: 10 }}>
-                Save User Changes
+                {t('saveChangesAudit')}
               </button>
             </form>
           </div>

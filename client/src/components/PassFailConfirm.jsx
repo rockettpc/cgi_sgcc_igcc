@@ -10,14 +10,14 @@ export const PassFailConfirm = ({
 }) => {
   const { t } = useLanguage();
 
-  if (type === 'tempered') {
+  if (type === 'tempered' || type === 'rollwave') {
     const isPass = suggestedValue === 'Pass';
     return (
       <div className="confirm-box">
         <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
           {t('suggestedResult')}:
           <span className={`suggested-badge ${isPass ? 'badge-pass' : 'badge-fail'}`}>
-            {isPass ? 'PASS (<= Max Weight)' : 'FAIL (> Max Weight)'}
+            {isPass ? (type === 'rollwave' ? t('passLimit') : t('passWeight')) : (type === 'rollwave' ? t('failLimit') : t('failWeight'))}
           </span>
         </div>
 
@@ -32,7 +32,7 @@ export const PassFailConfirm = ({
             className={`confirm-btn confirm-btn-pass ${confirmedValue === 'Pass' ? 'selected' : ''}`}
             onClick={() => onConfirm('Pass')}
           >
-            ✓ PASS
+            ✓ {t('confirmPass')}
           </button>
 
           <button
@@ -40,7 +40,7 @@ export const PassFailConfirm = ({
             className={`confirm-btn confirm-btn-fail ${confirmedValue === 'Fail' ? 'selected' : ''}`}
             onClick={() => onConfirm('Fail')}
           >
-            ✕ FAIL
+            ✕ {t('confirmFail')}
           </button>
         </div>
       </div>
@@ -53,13 +53,13 @@ export const PassFailConfirm = ({
       <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
         {t('suggestedResult')}:
         <span className="suggested-badge badge-pass">
-          Category {suggestedValue || '1'}
+          Cat {suggestedValue || '1'}
         </span>
       </div>
 
       <div style={{ margin: '12px 0 6px', fontSize: '0.82rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
         <AlertCircle size={14} color="var(--warning-text)" />
-        <span>Select ASTM F3007-13 Category Confirmation</span>
+        <span>{t('selectCategoryConfirmation')}</span>
       </div>
 
       <div className="confirm-toggle-group" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)' }}>

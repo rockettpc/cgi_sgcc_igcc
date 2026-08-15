@@ -94,7 +94,7 @@ export const PhotoCapture = ({ photoPath, onPhotoUploaded }) => {
               className="icon-btn" 
               style={{ width: 28, height: 28, marginLeft: 10 }}
               onClick={() => { setPreview(null); onPhotoUploaded(null); }}
-              title="Remove Photo"
+              title={t('removePhoto')}
             >
               <X size={14} />
             </button>
@@ -104,10 +104,10 @@ export const PhotoCapture = ({ photoPath, onPhotoUploaded }) => {
         <div className="photo-box" onClick={() => fileInputRef.current?.click()}>
           <Camera size={32} color="var(--accent-primary)" style={{ margin: '0 auto 8px' }} />
           <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>
-            {uploading ? 'Compressing & Uploading...' : t('addPhoto')}
+            {uploading ? t('compressingUploading') : t('addPhoto')}
           </div>
           <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 4 }}>
-            Direct Camera on Mobile • File Upload on Desktop
+            {t('directCameraMobile')}
           </div>
         </div>
       )}

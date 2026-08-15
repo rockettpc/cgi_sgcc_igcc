@@ -7,13 +7,14 @@ export const RecordsList = () => {
   const { token, user } = useAuth();
   const { t } = useLanguage();
 
-  const [activeType, setActiveType] = useState('tempered'); // 'tempered' or 'laminated'
+  const [activeType, setActiveType] = useState('tempered'); // 'tempered', 'laminated', or 'rollwave'
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [sgccFilter, setSgccFilter] = useState('');
 
   const [temperedRecords, setTemperedRecords] = useState([]);
   const [laminatedRecords, setLaminatedRecords] = useState([]);
+  const [rollWaveRecords, setRollWaveRecords] = useState([]);
   const [loading, setLoading] = useState(false);
 
   const [auditModal, setAuditModal] = useState({ open: false, logs: [], title: '' });
@@ -33,6 +34,14 @@ export const RecordsList = () => {
       })
         .then(res => res.json())
         .then(data => { if (Array.isArray(data)) setTemperedRecords(data); })
+        .catch(() => {})
+        .finally(() => setLoading(false));
+    } else if (activeType === 'rollwave') {
+      fetch(`/api/roll-wave-tests?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+        .then(res => res.json())
+        .then(data => { if (Array.isArray(data)) setRollWaveRecords(data); })
         .catch(() => {})
         .finally(() => setLoading(false));
     } else {
@@ -74,13 +83,15 @@ export const RecordsList = () => {
   };
 
   const handleExportCsv = () => {
-    const url = `/api/export/csv?type=${activeType}&startDate=${startDate}&endDate=${endDate}`;
-    downloadFile(url, `${activeType}_test_records.csv`);
+    const exportType = activeType === 'rollwave' ? 'roll_wave' : activeType;
+    const url = `/api/export/csv?type=${exportType}&startDate=${startDate}&endDate=${endDate}`;
+    downloadFile(url, `${exportType}_test_records.csv`);
   };
 
   const handleExportPdf = () => {
-    const url = `/api/export/pdf?type=${activeType}&startDate=${startDate}&endDate=${endDate}`;
-    downloadFile(url, `${activeType}_audit_report.pdf`);
+    const exportType = activeType === 'rollwave' ? 'roll_wave' : activeType;
+    const url = `/api/export/pdf?type=${exportType}&startDate=${startDate}&endDate=${endDate}`;
+    downloadFile(url, `${exportType}_audit_report.pdf`);
   };
 
   const openAuditLogs = (entityType, entityId) => {
@@ -95,15 +106,18 @@ export const RecordsList = () => {
   };
 
   const handleDeleteRecord = async (id, type) => {
-    if (!window.confirm('Are you sure you want to delete this compliance record? This action will be logged in the audit trail.')) return;
+    if (!window.confirm(t('confirmDeleteAlert'))) return;
     try {
-      const url = type === 'tempered' ? `/api/tempered-tests/${id}` : `/api/laminated/traceability/${id}`;
+      let url = `/api/tempered-tests/${id}`;
+      if (type === 'laminated') url = `/api/laminated/traceability/${id}`;
+      if (type === 'rollwave') url = `/api/roll-wave-tests/${id}`;
+
       const res = await fetch(url, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
-        alert('Record deleted successfully');
+        alert(t('recordDeletedSuccess'));
         fetchRecords();
       } else {
         const data = await res.json();
@@ -118,7 +132,10 @@ export const RecordsList = () => {
     e.preventDefault();
     const { record, type } = editModal;
     try {
-      const url = type === 'tempered' ? `/api/tempered-tests/${record.id}` : `/api/laminated/traceability/${record.id}`;
+      let url = `/api/tempered-tests/${record.id}`;
+      if (type === 'laminated') url = `/api/laminated/traceability/${record.id}`;
+      if (type === 'rollwave') url = `/api/roll-wave-tests/${record.id}`;
+
       const res = await fetch(url, {
         method: 'PUT',
         headers: {
@@ -128,7 +145,7 @@ export const RecordsList = () => {
         body: JSON.stringify(record)
       });
       if (res.ok) {
-        alert('Record updated successfully');
+        alert(t('recordUpdatedSuccess'));
         setEditModal({ open: false, record: null, type: 'tempered' });
         fetchRecords();
       } else {
@@ -143,7 +160,7 @@ export const RecordsList = () => {
   return (
     <div>
       <div className="card">
-        <div className="card-title" style={{ justifyContent: 'space-between' }}>
+        <div className="card-title" style={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <FileSpreadsheet size={24} color="var(--success-text)" />
             <span>{t('recordsList')}</span>
@@ -159,21 +176,28 @@ export const RecordsList = () => {
           </div>
         </div>
 
-        {/* Record Type Selector */}
-        <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
+        {/* Record Type Selector (3 Tabs) */}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
           <button
             className={`btn ${activeType === 'tempered' ? 'btn-primary' : 'btn-secondary'}`}
-            style={{ flex: 1, minHeight: 40, fontSize: '0.88rem' }}
+            style={{ flex: 1, minWidth: 140, minHeight: 40, fontSize: '0.85rem' }}
             onClick={() => setActiveType('tempered')}
           >
-            {t('newTemperedTest')} Logs
+            {t('newTemperedTest')}
           </button>
           <button
             className={`btn ${activeType === 'laminated' ? 'btn-primary' : 'btn-secondary'}`}
-            style={{ flex: 1, minHeight: 40, fontSize: '0.88rem' }}
+            style={{ flex: 1, minWidth: 140, minHeight: 40, fontSize: '0.85rem' }}
             onClick={() => setActiveType('laminated')}
           >
-            {t('newLaminatedTest')} Logs
+            {t('newLaminatedTest')}
+          </button>
+          <button
+            className={`btn ${activeType === 'rollwave' ? 'btn-primary' : 'btn-secondary'}`}
+            style={{ flex: 1, minWidth: 140, minHeight: 40, fontSize: '0.85rem' }}
+            onClick={() => setActiveType('rollwave')}
+          >
+            {t('newRollWaveTest')}
           </button>
         </div>
 
@@ -214,26 +238,26 @@ export const RecordsList = () => {
 
         {/* Data Table */}
         {loading ? (
-          <div style={{ textAlign: 'center', padding: 20, color: 'var(--text-muted)' }}>Loading records...</div>
+          <div style={{ textAlign: 'center', padding: 20, color: 'var(--text-muted)' }}>{t('loadingRecords')}</div>
         ) : activeType === 'tempered' ? (
           <div className="table-container">
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>Date / Time</th>
-                  <th>SGCC #</th>
-                  <th>Thickness</th>
-                  <th>Max Wt (g)</th>
-                  <th>10-Pc Wt (g)</th>
-                  <th>Result</th>
-                  <th>Operator</th>
-                  <th>Photo</th>
-                  <th>Actions</th>
+                  <th>{t('dateTime')}</th>
+                  <th>{t('sgccNumber')}</th>
+                  <th>{t('thickness')}</th>
+                  <th>{t('maxWt')}</th>
+                  <th>{t('pcWt10')}</th>
+                  <th>{t('result')}</th>
+                  <th>{t('operatorName')}</th>
+                  <th>{t('photo')}</th>
+                  <th>{t('actions')}</th>
                 </tr>
               </thead>
               <tbody>
                 {temperedRecords.length === 0 ? (
-                  <tr><td colSpan={9} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>No tempered break test records found.</td></tr>
+                  <tr><td colSpan={9} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>{t('noTemperedRecords')}</td></tr>
                 ) : (
                   temperedRecords.map(r => (
                     <tr key={r.id}>
@@ -310,24 +334,127 @@ export const RecordsList = () => {
               </tbody>
             </table>
           </div>
-        ) : (
+        ) : activeType === 'rollwave' ? (
+          /* Roll Wave Data Table */
           <div className="table-container">
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>Prod Date</th>
-                  <th>SGCC #</th>
-                  <th>Interlayer</th>
-                  <th>Type / Kind</th>
-                  <th>Thickness</th>
-                  <th>Week</th>
-                  <th>Test Specimens</th>
-                  <th>Actions</th>
+                  <th>{t('dateTime')}</th>
+                  <th>{t('sgccNumber')}</th>
+                  <th>{t('specimenIdCol')}</th>
+                  <th>{t('thickness')}</th>
+                  <th>{t('gaugeType')}</th>
+                  <th>{t('avgLCol')}</th>
+                  <th>{t('maxWCol')}</th>
+                  <th>{t('maxDistortionCol')}</th>
+                  <th>{t('result')}</th>
+                  <th>{t('operatorName')}</th>
+                  <th>{t('photo')}</th>
+                  <th>{t('actions')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rollWaveRecords.length === 0 ? (
+                  <tr><td colSpan={12} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>{t('noRollWaveRecords')}</td></tr>
+                ) : (
+                  rollWaveRecords.map(r => (
+                    <tr key={r.id}>
+                      <td>{r.test_date ? r.test_date.substring(0, 10) : ''} {r.test_time}</td>
+                      <td style={{ fontWeight: 600 }}>{r.sgcc_number}</td>
+                      <td>{r.specimen_id}</td>
+                      <td>{r.glass_thickness}</td>
+                      <td>{r.gauge_type}</td>
+                      <td>{r.average_wavelength !== null ? `${r.average_wavelength} ${r.unit === 'mm' ? 'mm' : 'in'}` : 'N/A'}</td>
+                      <td>{r.max_depth} {r.unit === 'mm' ? 'mm' : 'in'}</td>
+                      <td style={{ fontWeight: 700 }}>{r.max_distortion_mdpt} mdpt</td>
+                      <td>
+                        <span className={`suggested-badge ${r.confirmed_pass_fail === 'Pass' ? 'badge-pass' : 'badge-fail'}`}>
+                          {r.confirmed_pass_fail}
+                        </span>
+                      </td>
+                      <td>{r.operator_name}</td>
+                      <td>
+                        {r.photo_path ? (
+                          <button 
+                            className="icon-btn" 
+                            style={{ width: 32, height: 32 }}
+                            onClick={() => setViewModal({ open: true, record: r, type: 'rollwave' })}
+                            title="View Photo"
+                          >
+                            <ImageIcon size={16} color="var(--accent-primary)" />
+                          </button>
+                        ) : '-'}
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', gap: 4 }}>
+                          <button 
+                            className="icon-btn" 
+                            style={{ width: 30, height: 30 }}
+                            onClick={() => setViewModal({ open: true, record: r, type: 'rollwave' })}
+                            title="View Log Details"
+                          >
+                            <Eye size={15} />
+                          </button>
+
+                          {(user?.role === 'QA Rep' || user?.role === 'Admin') && (
+                            <button 
+                              className="icon-btn" 
+                              style={{ width: 30, height: 30 }}
+                              onClick={() => openAuditLogs('roll_wave', r.id)}
+                              title="View Audit Trail"
+                            >
+                              <History size={15} />
+                            </button>
+                          )}
+
+                          {user?.role === 'Admin' && (
+                            <>
+                              <button 
+                                className="icon-btn" 
+                                style={{ width: 30, height: 30, color: 'var(--accent-primary)' }}
+                                onClick={() => setEditModal({ open: true, record: { ...r, test_date: r.test_date ? r.test_date.substring(0, 10) : '' }, type: 'rollwave' })}
+                                title="Edit Record (Admin)"
+                              >
+                                <Edit size={15} />
+                              </button>
+                              <button 
+                                className="icon-btn" 
+                                style={{ width: 30, height: 30, color: 'var(--danger-text)' }}
+                                onClick={() => handleDeleteRecord(r.id, 'rollwave')}
+                                title="Delete Record (Admin)"
+                              >
+                                <Trash2 size={15} />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          /* Laminated Data Table */
+          <div className="table-container">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>{t('productionDate')}</th>
+                  <th>{t('sgccNumber')}</th>
+                  <th>{t('interlayerCol')}</th>
+                  <th>{t('typeKindCol')}</th>
+                  <th>{t('thickness')}</th>
+                  <th>{t('week')}</th>
+                  <th>{t('testSpecimensCol')}</th>
+                  <th>{t('actions')}</th>
                 </tr>
               </thead>
               <tbody>
                 {laminatedRecords.length === 0 ? (
-                  <tr><td colSpan={8} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>No laminated traceability records found.</td></tr>
+                  <tr><td colSpan={8} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>{t('noLaminatedRecords')}</td></tr>
                 ) : (
                   laminatedRecords.map(r => (
                     <tr key={r.id}>
@@ -347,7 +474,7 @@ export const RecordsList = () => {
                             ))}
                           </div>
                         ) : (
-                          <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>No specimens tested yet</span>
+                          <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{t('noSpecimensTested')}</span>
                         )}
                       </td>
                       <td>
@@ -403,12 +530,14 @@ export const RecordsList = () => {
         )}
       </div>
 
-      {/* Detail View Modal (Available to All Users) */}
+      {/* Detail View Modal */}
       {viewModal.open && viewModal.record && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }}>
           <div className="card" style={{ width: '100%', maxWidth: 550, maxHeight: '90vh', overflowY: 'auto' }}>
             <div className="card-title" style={{ justifyContent: 'space-between' }}>
-              <span>Log Details - {viewModal.type === 'tempered' ? `Tempered #${viewModal.record.id}` : `Laminated #${viewModal.record.id}`}</span>
+              <span>
+                {t('logDetailsTitle')} - {viewModal.type === 'tempered' ? `Tempered #${viewModal.record.id}` : viewModal.type === 'rollwave' ? `Roll Wave #${viewModal.record.id}` : `Laminated #${viewModal.record.id}`}
+              </span>
               <button className="icon-btn" onClick={() => setViewModal({ open: false, record: null, type: 'tempered' })}>
                 <X size={18} />
               </button>
@@ -416,43 +545,67 @@ export const RecordsList = () => {
 
             {viewModal.type === 'tempered' ? (
               <div style={{ fontSize: '0.9rem', lineHeight: 1.6 }}>
-                <div><strong>Date & Time:</strong> {viewModal.record.test_date ? viewModal.record.test_date.substring(0, 10) : ''} {viewModal.record.test_time}</div>
-                <div><strong>SGCC #:</strong> {viewModal.record.sgcc_number}</div>
-                <div><strong>Glass Type:</strong> {viewModal.record.glass_type}</div>
-                <div><strong>Thickness:</strong> {viewModal.record.thickness}</div>
-                <div><strong>Sample Size:</strong> {viewModal.record.sample_size}</div>
-                <div><strong>Specimen Weight:</strong> {viewModal.record.specimen_weight_lbs} lbs</div>
-                <div><strong>Max Allowable Weight:</strong> {viewModal.record.max_allowable_particle_weight} g</div>
-                <div><strong>Actual 10-Piece Weight:</strong> {viewModal.record.actual_10pc_particle_weight} g</div>
-                <div><strong>Result:</strong> <span className={`suggested-badge ${viewModal.record.confirmed_pass_fail === 'Pass' ? 'badge-pass' : 'badge-fail'}`}>{viewModal.record.confirmed_pass_fail}</span></div>
-                <div><strong>Operator:</strong> {viewModal.record.operator_name}</div>
-                {viewModal.record.notes && <div><strong>Notes:</strong> {viewModal.record.notes}</div>}
+                <div><strong>{t('dateTime')}:</strong> {viewModal.record.test_date ? viewModal.record.test_date.substring(0, 10) : ''} {viewModal.record.test_time}</div>
+                <div><strong>{t('sgccNumber')}:</strong> {viewModal.record.sgcc_number}</div>
+                <div><strong>{t('glassType')}:</strong> {viewModal.record.glass_type}</div>
+                <div><strong>{t('thickness')}:</strong> {viewModal.record.thickness}</div>
+                <div><strong>{t('sampleSize')}:</strong> {viewModal.record.sample_size}</div>
+                <div><strong>{t('specimenWeightLbs')}:</strong> {viewModal.record.specimen_weight_lbs} lbs</div>
+                <div><strong>{t('maxAllowableWeight')}:</strong> {viewModal.record.max_allowable_particle_weight} g</div>
+                <div><strong>{t('actual10pcWeight')}:</strong> {viewModal.record.actual_10pc_particle_weight} g</div>
+                <div><strong>{t('result')}:</strong> <span className={`suggested-badge ${viewModal.record.confirmed_pass_fail === 'Pass' ? 'badge-pass' : 'badge-fail'}`}>{viewModal.record.confirmed_pass_fail}</span></div>
+                <div><strong>{t('operatorName')}:</strong> {viewModal.record.operator_name}</div>
+                {viewModal.record.notes && <div><strong>{t('notes')}:</strong> {viewModal.record.notes}</div>}
                 
                 {viewModal.record.photo_path ? (
                   <div style={{ marginTop: 14, textAlign: 'center' }}>
-                    <div style={{ fontWeight: 600, marginBottom: 6 }}>Uploaded Specimen Photo:</div>
+                    <div style={{ fontWeight: 600, marginBottom: 6 }}>{t('uploadedPhoto')}:</div>
                     <img src={viewModal.record.photo_path} alt="Specimen Photo" style={{ maxWidth: '100%', maxHeight: 300, borderRadius: 8, border: '1px solid var(--border-color)' }} />
                   </div>
                 ) : (
-                  <div style={{ marginTop: 10, color: 'var(--text-muted)' }}>No specimen photo uploaded for this log.</div>
+                  <div style={{ marginTop: 10, color: 'var(--text-muted)' }}>{t('noPhoto')}</div>
+                )}
+              </div>
+            ) : viewModal.type === 'rollwave' ? (
+              <div style={{ fontSize: '0.9rem', lineHeight: 1.6 }}>
+                <div><strong>{t('dateTime')}:</strong> {viewModal.record.test_date ? viewModal.record.test_date.substring(0, 10) : ''} {viewModal.record.test_time}</div>
+                <div><strong>{t('sgccNumber')}:</strong> {viewModal.record.sgcc_number}</div>
+                <div><strong>{t('specimenId')}:</strong> {viewModal.record.specimen_id}</div>
+                <div><strong>{t('thickness')}:</strong> {viewModal.record.glass_thickness}</div>
+                <div><strong>{t('gaugeType')}:</strong> {viewModal.record.gauge_type} ({viewModal.record.unit})</div>
+                <div><strong>{t('avgWavelength')}:</strong> {viewModal.record.average_wavelength !== null ? `${viewModal.record.average_wavelength} ${viewModal.record.unit === 'mm' ? 'mm' : 'in'}` : 'N/A'}</div>
+                <div><strong>{t('depthRange')}:</strong> W_min={viewModal.record.min_depth}, W_max={viewModal.record.max_depth}, W_avg={viewModal.record.avg_depth} {viewModal.record.unit === 'mm' ? 'mm' : 'in'}</div>
+                <div><strong>{t('maxDistortion')}:</strong> D_max = <strong>{viewModal.record.max_distortion_mdpt} mdpt</strong> | D_avg = {viewModal.record.avg_distortion_mdpt} mdpt</div>
+                <div><strong>{t('thresholdMdpt')}:</strong> {viewModal.record.distortion_threshold_mdpt ? `${viewModal.record.distortion_threshold_mdpt} mdpt` : 'N/A'}</div>
+                <div><strong>{t('result')}:</strong> <span className={`suggested-badge ${viewModal.record.confirmed_pass_fail === 'Pass' ? 'badge-pass' : 'badge-fail'}`}>{viewModal.record.confirmed_pass_fail}</span></div>
+                <div><strong>{t('operatorName')}:</strong> {viewModal.record.operator_name}</div>
+                {viewModal.record.notes && <div><strong>{t('notes')}:</strong> {viewModal.record.notes}</div>}
+                
+                {viewModal.record.photo_path ? (
+                  <div style={{ marginTop: 14, textAlign: 'center' }}>
+                    <div style={{ fontWeight: 600, marginBottom: 6 }}>{t('uploadedPhoto')}:</div>
+                    <img src={viewModal.record.photo_path} alt="Specimen Photo" style={{ maxWidth: '100%', maxHeight: 300, borderRadius: 8, border: '1px solid var(--border-color)' }} />
+                  </div>
+                ) : (
+                  <div style={{ marginTop: 10, color: 'var(--text-muted)' }}>{t('noPhoto')}</div>
                 )}
               </div>
             ) : (
               <div style={{ fontSize: '0.9rem', lineHeight: 1.6 }}>
-                <div><strong>Production Date:</strong> {viewModal.record.production_date ? viewModal.record.production_date.substring(0, 10) : ''} {viewModal.record.production_time}</div>
-                <div><strong>SGCC #:</strong> {viewModal.record.sgcc_number || 'N/A'}</div>
-                <div><strong>Interlayer Type:</strong> {viewModal.record.interlayer_type}</div>
-                <div><strong>Glass Type & Kind:</strong> {viewModal.record.glass_type} ({viewModal.record.glass_kind})</div>
-                <div><strong>Nominal Thickness:</strong> {viewModal.record.nominal_thickness}</div>
-                <div><strong>Collection Week:</strong> Week {viewModal.record.collection_week}</div>
+                <div><strong>{t('productionDate')}:</strong> {viewModal.record.production_date ? viewModal.record.production_date.substring(0, 10) : ''} {viewModal.record.production_time}</div>
+                <div><strong>{t('sgccNumber')}:</strong> {viewModal.record.sgcc_number || 'N/A'}</div>
+                <div><strong>{t('interlayerType')}:</strong> {viewModal.record.interlayer_type}</div>
+                <div><strong>{t('glassType')}:</strong> {viewModal.record.glass_type} ({viewModal.record.glass_kind})</div>
+                <div><strong>{t('thickness')}:</strong> {viewModal.record.nominal_thickness}</div>
+                <div><strong>{t('collectionWeek')}:</strong> {t('week')} {viewModal.record.collection_week}</div>
 
-                <div style={{ marginTop: 12, fontWeight: 700 }}>Specimen Test Results:</div>
+                <div style={{ marginTop: 12, fontWeight: 700 }}>{t('testSpecimensCol')}:</div>
                 {viewModal.record.test_results && viewModal.record.test_results.length > 0 ? (
                   viewModal.record.test_results.map(res => (
                     <div key={res.id} style={{ border: '1px solid var(--border-color)', borderRadius: 6, padding: 8, marginTop: 6, backgroundColor: 'var(--bg-primary)' }}>
-                      <div><strong>Specimen #{res.specimen_number}:</strong> Tested {res.test_date ? res.test_date.substring(0, 10) : ''}</div>
-                      <div>Drop Class: {res.drop_height_class} | Temp: {res.specimen_temp}°{res.temp_unit} | Min Thick: {res.measured_min_thickness}"</div>
-                      <div>Result Category: <strong>Cat {res.confirmed_result}</strong></div>
+                      <div><strong>{t('specimenNumber')} #{res.specimen_number}:</strong> Tested {res.test_date ? res.test_date.substring(0, 10) : ''}</div>
+                      <div>{t('dropClass')}: {res.drop_height_class} | Temp: {res.specimen_temp}°{res.temp_unit} | {t('minThickness')}: {res.measured_min_thickness}"</div>
+                      <div>{t('result')}: <strong>Cat {res.confirmed_result}</strong></div>
                       {res.photo_path && (
                         <div style={{ marginTop: 6, textAlign: 'center' }}>
                           <img src={res.photo_path} alt="Specimen Photo" style={{ maxWidth: '100%', maxHeight: 200, borderRadius: 6 }} />
@@ -461,7 +614,7 @@ export const RecordsList = () => {
                     </div>
                   ))
                 ) : (
-                  <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>No specimens tested yet.</div>
+                  <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{t('noSpecimensTested')}</div>
                 )}
               </div>
             )}
@@ -474,7 +627,7 @@ export const RecordsList = () => {
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }}>
           <div className="card" style={{ width: '100%', maxWidth: 500, maxHeight: '90vh', overflowY: 'auto' }}>
             <div className="card-title" style={{ justifyContent: 'space-between' }}>
-              <span>Edit Compliance Log (Admin)</span>
+              <span>{t('editLogTitle')}</span>
               <button className="icon-btn" onClick={() => setEditModal({ open: false, record: null, type: 'tempered' })}>
                 <X size={18} />
               </button>
@@ -503,7 +656,47 @@ export const RecordsList = () => {
                     />
                   </div>
                   <div className="form-group">
-                    <label className="form-label">Confirmed Pass/Fail</label>
+                    <label className="form-label">{t('result')}</label>
+                    <select
+                      className="form-select"
+                      value={editModal.record.confirmed_pass_fail}
+                      onChange={(e) => setEditModal({ ...editModal, record: { ...editModal.record, confirmed_pass_fail: e.target.value } })}
+                    >
+                      <option value="Pass">Pass</option>
+                      <option value="Fail">Fail</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">{t('notes')}</label>
+                    <textarea
+                      className="form-textarea"
+                      value={editModal.record.notes || ''}
+                      onChange={(e) => setEditModal({ ...editModal, record: { ...editModal.record, notes: e.target.value } })}
+                    />
+                  </div>
+                </>
+              ) : editModal.type === 'rollwave' ? (
+                <>
+                  <div className="form-group">
+                    <label className="form-label">{t('sgccNumber')}</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={editModal.record.sgcc_number || ''}
+                      onChange={(e) => setEditModal({ ...editModal, record: { ...editModal.record, sgcc_number: e.target.value } })}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">{t('specimenId')}</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={editModal.record.specimen_id || ''}
+                      onChange={(e) => setEditModal({ ...editModal, record: { ...editModal.record, specimen_id: e.target.value } })}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">{t('result')}</label>
                     <select
                       className="form-select"
                       value={editModal.record.confirmed_pass_fail}
@@ -546,7 +739,7 @@ export const RecordsList = () => {
               )}
 
               <button type="submit" className="btn btn-primary" style={{ marginTop: 10 }}>
-                Save Changes (Records Audit Trail)
+                {t('saveChangesAudit')}
               </button>
             </form>
           </div>
@@ -558,14 +751,14 @@ export const RecordsList = () => {
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }}>
           <div className="card" style={{ width: '100%', maxWidth: 600, maxHeight: '80vh', overflowY: 'auto' }}>
             <div className="card-title" style={{ justifyContent: 'space-between' }}>
-              <span>Audit Trail - {auditModal.title}</span>
+              <span>{t('auditTrailTitle')} - {auditModal.title}</span>
               <button className="icon-btn" onClick={() => setAuditModal({ open: false, logs: [], title: '' })}>
                 <X size={18} />
               </button>
             </div>
             
             {auditModal.logs.length === 0 ? (
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>No edits logged for this record.</p>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>{t('noAuditLogs')}</p>
             ) : (
               auditModal.logs.map(log => (
                 <div key={log.id} style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: 10, marginBottom: 10 }}>
@@ -574,7 +767,7 @@ export const RecordsList = () => {
                   </div>
                   {log.old_values && (
                     <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 4 }}>
-                      Before: {JSON.stringify(JSON.parse(log.old_values))}
+                      Before: {typeof log.old_values === 'string' ? log.old_values : JSON.stringify(log.old_values)}
                     </div>
                   )}
                 </div>

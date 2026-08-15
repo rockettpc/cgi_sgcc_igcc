@@ -7,8 +7,10 @@ import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
 import { TemperedForm } from './pages/TemperedForm';
 import { LaminatedForm } from './pages/LaminatedForm';
+import { RollWaveForm } from './pages/RollWaveForm';
 import { RecordsList } from './pages/RecordsList';
 import { AdminPanel } from './pages/AdminPanel';
+import { ReferenceDocuments } from './pages/ReferenceDocuments';
 
 function MainLayout() {
   const { user } = useAuth();
@@ -32,7 +34,9 @@ function MainLayout() {
         {tab === 'dashboard' && <Dashboard setTab={setTab} />}
         {tab === 'tempered' && <TemperedForm setTab={setTab} />}
         {tab === 'laminated' && <LaminatedForm setTab={setTab} />}
+        {tab === 'rollwave' && <RollWaveForm setTab={setTab} />}
         {tab === 'records' && <RecordsList />}
+        {tab === 'docs' && <ReferenceDocuments setTab={setTab} />}
         {tab === 'admin' && user.role === 'Admin' && <AdminPanel />}
       </main>
     </div>
