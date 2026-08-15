@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
-import { FileSpreadsheet, Download, Image as ImageIcon, History, X, Eye, Edit, Trash2, CheckCircle2 } from 'lucide-react';
+import { FileSpreadsheet, Download, Image as ImageIcon, History, X, Eye, Edit, Trash2, CheckCircle2, ArrowLeft } from 'lucide-react';
 
-export const RecordsList = () => {
+export const RecordsList = ({ setTab }) => {
   const { token, user } = useAuth();
   const { t } = useLanguage();
 
@@ -159,6 +159,15 @@ export const RecordsList = () => {
 
   return (
     <div>
+      {setTab && (
+        <button 
+          className="btn btn-secondary" 
+          style={{ marginBottom: 16 }}
+          onClick={() => setTab('dashboard')}
+        >
+          <ArrowLeft size={16} /> {t('backToDashboard')}
+        </button>
+      )}
       <div className="card">
         <div className="card-title" style={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

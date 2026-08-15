@@ -35,7 +35,7 @@ function MainLayout() {
         {tab === 'tempered' && <TemperedForm setTab={setTab} />}
         {tab === 'laminated' && <LaminatedForm setTab={setTab} />}
         {tab === 'rollwave' && <RollWaveForm setTab={setTab} />}
-        {tab === 'records' && <RecordsList />}
+        {tab === 'records' && <RecordsList setTab={setTab} />}
         {tab === 'docs' && <ReferenceDocuments setTab={setTab} />}
         {tab === 'admin' && user.role === 'Admin' && <AdminPanel />}
       </main>

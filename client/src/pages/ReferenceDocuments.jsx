@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
-import { BookOpen, FileText, Download, ShieldCheck } from 'lucide-react';
+import { BookOpen, FileText, Download, ShieldCheck, ArrowLeft } from 'lucide-react';
 
 const DEFAULT_DOCUMENTS = [
   {
@@ -75,6 +75,15 @@ export const ReferenceDocuments = ({ setTab }) => {
 
   return (
     <div>
+      {setTab && (
+        <button 
+          className="btn btn-secondary" 
+          style={{ marginBottom: 16 }}
+          onClick={() => setTab('dashboard')}
+        >
+          <ArrowLeft size={16} /> {t('backToDashboard')}
+        </button>
+      )}
       <div className="card">
         <div className="card-title">
           <BookOpen size={24} color="var(--accent-primary)" />

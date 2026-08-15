@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { PhotoCapture } from '../components/PhotoCapture';
 import { PassFailConfirm } from '../components/PassFailConfirm';
-import { Activity, Plus, Trash2, RotateCcw, Sparkles, CheckCircle2, ShieldAlert } from 'lucide-react';
+import { Activity, Plus, Trash2, RotateCcw, Sparkles, CheckCircle2, ShieldAlert, ArrowLeft } from 'lucide-react';
 
 const DEFAULT_SAMPLE_INCHES = [
   { type: 'peak', position: 12.0, reading: 0 },
@@ -392,7 +392,16 @@ export const RollWaveForm = ({ setTab }) => {
   };
 
   return (
-    <div className="card" style={{ maxWidth: 850, margin: '0 auto' }}>
+    <div style={{ maxWidth: 850, margin: '0 auto' }}>
+      <button 
+        className="btn btn-secondary" 
+        style={{ marginBottom: 16 }}
+        onClick={() => setTab('dashboard')}
+      >
+        <ArrowLeft size={16} /> {t('backToDashboard')}
+      </button>
+
+      <div className="card">
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
         <Activity size={26} color="var(--accent-primary)" />
         <div>
@@ -683,6 +692,7 @@ export const RollWaveForm = ({ setTab }) => {
           {loading ? t('saving') : t('submitRecord')}
         </button>
       </form>
+      </div>
     </div>
   );
 };
