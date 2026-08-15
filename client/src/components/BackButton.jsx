@@ -8,7 +8,8 @@ export const BackButton = ({ onClick }) => {
   return (
     <button
       type="button"
-      className="back-btn"
+      className="btn btn-secondary"
+      style={{ width: 'auto', marginBottom: 14, minHeight: 36, padding: '6px 14px', display: 'inline-flex', alignItems: 'center', gap: 6 }}
       onClick={onClick}
     >
       <ArrowLeft size={16} />
