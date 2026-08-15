@@ -8,7 +8,28 @@ Target deployment is a Linux VM on **Proxmox** running **Docker + Docker Compose
 
 ## 📸 Interface Screenshots
 
-![SGCC QA Application Dashboard](docs/screenshots/Screenshot%20From%202026-08-06%2021-29-54.png)
+### Main Dashboard & Compliance Reminder
+![SGCC QA Main Dashboard](docs/screenshots/Screenshot%20From%202026-08-15%2009-39-54.png)
+
+### Tempered Glass Center Punch Break Test
+![Tempered Glass Break Test Form](docs/screenshots/Screenshot%20From%202026-08-15%2009-40-27.png)
+
+### Laminated Glass Ball Drop Test & Traceability
+![Laminated Glass Traceability & Test Form](docs/screenshots/Screenshot%20From%202026-08-15%2009-40-36.png)
+
+### Roll Wave Distortion Test (ASTM C1651) & SVG Contour Profile
+![Roll Wave Optical Distortion Test Form](docs/screenshots/Screenshot%20From%202026-08-15%2009-40-43.png)
+![ASTM C1651 Calculation Results & Chart](docs/screenshots/Screenshot%20From%202026-08-15%2009-40-51.png)
+
+### Historical Records & Audit Trail Export
+![Compliance Records List & Audit Filter](docs/screenshots/Screenshot%20From%202026-08-15%2009-41-01.png)
+![Record Audit Details Modal](docs/screenshots/Screenshot%20From%202026-08-15%2009-41-09.png)
+
+### Reference Standards Library & Official PDF Specifications
+![QA & ASTM Reference Standards Library](docs/screenshots/Screenshot%20From%202026-08-15%2009-41-16.png)
+
+### Admin Panel & User Role Management
+![Admin Panel User & Dropdown List Management](docs/screenshots/Screenshot%20From%202026-08-15%2009-41-24.png)
 
 ---
 
