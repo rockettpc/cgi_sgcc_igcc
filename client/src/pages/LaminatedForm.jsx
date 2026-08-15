@@ -3,7 +3,8 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { PhotoCapture } from '../components/PhotoCapture';
 import { PassFailConfirm } from '../components/PassFailConfirm';
-import { Layers, ArrowLeft, PlusCircle, CheckCircle, ListPlus } from 'lucide-react';
+import { BackButton } from '../components/BackButton';
+import { Layers, PlusCircle, CheckCircle, ListPlus } from 'lucide-react';
 
 export const LaminatedForm = ({ setTab }) => {
   const { user, token } = useAuth();
@@ -156,9 +157,7 @@ export const LaminatedForm = ({ setTab }) => {
 
   return (
     <div>
-      <button className="btn btn-secondary" style={{ width: 'auto', marginBottom: 14, minHeight: 36, padding: '6px 14px' }} onClick={() => setTab('dashboard')}>
-        <ArrowLeft size={16} /> {t('backToDashboard')}
-      </button>
+      <BackButton onClick={() => setTab('dashboard')} />
 
       <div className="card">
         <div className="card-title">

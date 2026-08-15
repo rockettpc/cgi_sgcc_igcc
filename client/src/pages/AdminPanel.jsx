@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
+import { BackButton } from '../components/BackButton';
 import { Users, ListPlus, Trash2, Plus, Edit, X, KeyRound, Shield } from 'lucide-react';
 
-export const AdminPanel = () => {
+export const AdminPanel = ({ setTab }) => {
   const { token, user: currentUser } = useAuth();
   const { t } = useLanguage();
 
@@ -155,6 +156,7 @@ export const AdminPanel = () => {
 
   return (
     <div>
+      {setTab && <BackButton onClick={() => setTab('dashboard')} />}
       {msg && (
         <div style={{ padding: 12, backgroundColor: 'var(--success-bg)', color: 'var(--success-text)', border: '1px solid var(--success-border)', borderRadius: 'var(--radius-sm)', marginBottom: 16 }}>
           {msg}

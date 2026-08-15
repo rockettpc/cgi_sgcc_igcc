@@ -3,7 +3,8 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { PhotoCapture } from '../components/PhotoCapture';
 import { PassFailConfirm } from '../components/PassFailConfirm';
-import { Activity, Plus, Trash2, RotateCcw, Sparkles, CheckCircle2, ShieldAlert, ArrowLeft } from 'lucide-react';
+import { BackButton } from '../components/BackButton';
+import { Activity, Plus, Trash2, RotateCcw, Sparkles, CheckCircle2, ShieldAlert } from 'lucide-react';
 
 const DEFAULT_SAMPLE_INCHES = [
   { type: 'peak', position: 12.0, reading: 0 },
@@ -392,14 +393,8 @@ export const RollWaveForm = ({ setTab }) => {
   };
 
   return (
-    <div style={{ maxWidth: 850, margin: '0 auto' }}>
-      <button 
-        className="btn btn-secondary" 
-        style={{ marginBottom: 16 }}
-        onClick={() => setTab('dashboard')}
-      >
-        <ArrowLeft size={16} /> {t('backToDashboard')}
-      </button>
+    <div>
+      <BackButton onClick={() => setTab('dashboard')} />
 
       <div className="card">
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>

@@ -37,7 +37,7 @@ function MainLayout() {
         {tab === 'rollwave' && <RollWaveForm setTab={setTab} />}
         {tab === 'records' && <RecordsList setTab={setTab} />}
         {tab === 'docs' && <ReferenceDocuments setTab={setTab} />}
-        {tab === 'admin' && user.role === 'Admin' && <AdminPanel />}
+        {tab === 'admin' && user.role === 'Admin' && <AdminPanel setTab={setTab} />}
       </main>
     </div>
   );
