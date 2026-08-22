@@ -44,12 +44,26 @@ export const TemperedForm = ({ setTab }) => {
     return isNaN(num) ? 2584 : num;
   };
 
+  // NOTE on rounding: maxVal is always derived from the *raw, unrounded* weight
+  // (whether that's the nominal density estimate or an operator-entered measured
+  // value), and only rounded once at the very end for display. Previously this
+  // chained through an already-rounded intermediate (specimen_weight_lbs.toFixed(1)),
+  // which introduced a small (~0.1-0.3g) compounding rounding error into the
+  // pass/fail threshold. Per SD-060 D.6 / SD-211 p.2, the max allowable weight
+  // is derived from ((weight / area) * 10 in^2) * 453.59 g/lb.
   const computeNominalValues = (thicknessStr, sizeStr, customWeightStr) => {
     const tIn = parseThickness(thicknessStr);
     const area = parseArea(sizeStr);
-    const calculatedWeight = (area * tIn * 0.091).toFixed(1);
-    const weightLbs = customWeightStr !== undefined && customWeightStr !== '' ? parseFloat(customWeightStr) : parseFloat(calculatedWeight);
-    const maxVal = (weightLbs > 0 && area > 0) ? (((weightLbs / area) * 10) * 453.59).toFixed(1) : '103.2';
+    const rawCalculatedWeight = area * tIn * 0.091; // nominal density-based estimate (lb), unrounded
+    const calculatedWeight = rawCalculatedWeight.toFixed(1); // display-only nominal estimate
+
+    const hasCustomWeight = customWeightStr !== undefined && customWeightStr !== '';
+    const rawWeightLbs = hasCustomWeight ? parseFloat(customWeightStr) : rawCalculatedWeight;
+
+    const maxVal = (rawWeightLbs > 0 && area > 0)
+      ? (((rawWeightLbs / area) * 10) * 453.59).toFixed(1)
+      : '103.2';
+
     return { calculatedWeight, maxVal };
   };
 
@@ -62,13 +76,21 @@ export const TemperedForm = ({ setTab }) => {
     glass_type: 'TTG (Non-Pattern)',
     thickness: '1/4"',
     sample_size: '34x76',
-    specimen_weight_lbs: initialValues.calculatedWeight,
+    // specimen_weight_lbs starts BLANK, not pre-filled with the nominal estimate.
+    // Per SD-211 p.2 and SD-060 D.6, this field must be the actual MEASURED/WEIGHED
+    // weight of the specimen, not a calculated nominal value. See nominalWeightHint
+    // below, which shows the estimate for reference only.
+    specimen_weight_lbs: '',
     max_allowable_particle_weight: initialValues.maxVal,
     actual_10pc_particle_weight: '',
     operator_name: user?.username || '',
     photo_path: null,
     notes: ''
   });
+
+  // Nominal (calculated, non-measured) weight estimate shown as a hint only —
+  // never auto-submitted as the specimen's actual weight.
+  const [nominalWeightHint, setNominalWeightHint] = useState(initialValues.calculatedWeight);
 
   const [suggestedResult, setSuggestedResult] = useState('Pass');
   const [confirmedResult, setConfirmedResult] = useState(null);
@@ -92,26 +114,41 @@ export const TemperedForm = ({ setTab }) => {
   }, [token]);
 
   const handleThicknessChange = (newThickness) => {
-    const { calculatedWeight, maxVal } = computeNominalValues(newThickness, formData.sample_size);
+    // Recompute the nominal hint for the new thickness. If the operator has
+    // already entered a real measured weight, keep using that for maxVal
+    // (area/thickness alone shouldn't override a real scale reading) —
+    // only fall back to the nominal estimate when no measured weight is present.
+    const hasMeasuredWeight = formData.specimen_weight_lbs !== '';
+    const { calculatedWeight, maxVal } = computeNominalValues(
+      newThickness,
+      formData.sample_size,
+      hasMeasuredWeight ? formData.specimen_weight_lbs : undefined
+    );
+    setNominalWeightHint(calculatedWeight);
     setFormData(prev => ({
       ...prev,
       thickness: newThickness,
-      specimen_weight_lbs: calculatedWeight,
       max_allowable_particle_weight: maxVal
     }));
   };
 
   const handleSampleSizeChange = (newSize) => {
-    const { calculatedWeight, maxVal } = computeNominalValues(formData.thickness, newSize);
+    const hasMeasuredWeight = formData.specimen_weight_lbs !== '';
+    const { calculatedWeight, maxVal } = computeNominalValues(
+      formData.thickness,
+      newSize,
+      hasMeasuredWeight ? formData.specimen_weight_lbs : undefined
+    );
+    setNominalWeightHint(calculatedWeight);
     setFormData(prev => ({
       ...prev,
       sample_size: newSize,
-      specimen_weight_lbs: calculatedWeight,
       max_allowable_particle_weight: maxVal
     }));
   };
 
   const handleSpecimenWeightChange = (newWeight) => {
+    // newWeight is the operator's actual MEASURED specimen weight (lbs).
     const { maxVal } = computeNominalValues(formData.thickness, formData.sample_size, newWeight);
     setFormData(prev => ({
       ...prev,
@@ -284,9 +321,14 @@ export const TemperedForm = ({ setTab }) => {
                 type="number"
                 step="0.1"
                 className="form-input"
+                placeholder={`${t('measuredWeightPlaceholder')} (~${nominalWeightHint} lb ${t('nominalEstimateSuffix')})`}
                 value={formData.specimen_weight_lbs}
                 onChange={(e) => handleSpecimenWeightChange(e.target.value)}
+                required
               />
+              <p className="form-hint" style={{ fontSize: '0.85rem', color: '#666', marginTop: '4px' }}>
+                {t('specimenWeightHint')}
+              </p>
             </div>
             <div className="form-group">
               <label className="form-label">{t('maxAllowableWeight')}</label>

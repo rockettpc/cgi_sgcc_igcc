@@ -91,6 +91,14 @@ router.post('/', async (req, res) => {
             return res.status(400).json({ error: 'Missing required test fields' });
         }
 
+        // Per SD-211 p.2 and SD-060 D.6, specimen weight must be an actual measured/weighed
+        // value, not a nominal calculated estimate — so it is required here, not optional.
+        // (The client also enforces this via a required form field; this is defense-in-depth
+        // for direct API calls.)
+        if (specimen_weight_lbs === undefined || specimen_weight_lbs === null || specimen_weight_lbs === '') {
+            return res.status(400).json({ error: 'specimen_weight_lbs is required and must be the actual measured weight of the specimen' });
+        }
+
         if (!confirmed_pass_fail) {
             return res.status(400).json({ error: 'Pass/Fail confirmation is mandatory' });
         }
@@ -104,7 +112,7 @@ router.post('/', async (req, res) => {
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
                 test_date, test_time, sgcc_number, glass_type, thickness, sample_size,
-                specimen_weight_lbs || null, max_allowable_particle_weight, actual_10pc_particle_weight,
+                specimen_weight_lbs, max_allowable_particle_weight, actual_10pc_particle_weight,
                 suggested_pass_fail || 'Fail', confirmed_pass_fail, req.user.id,
                 operator_name || req.user.username, photo_path || null, notes || null, req.user.id
             ]
